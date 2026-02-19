@@ -124,7 +124,8 @@ runs:
         ARTIFACT_NAME: ${{ inputs.artifact-name }}
         CHANGELOG: ${{ github.event.release.body }}
       run: |
-        ARTIFACTS=$(curl -sL -H "Accept: application/vnd.github.v3+json" "$ASSETS_URL")
+        ARTIFACTS="$(curl -sL "$ASSETS_URL")"
+        echo "$ARTIFACTS"
         INFO=$(jq -cr --arg name "$ARTIFACT_NAME" '.[] | select(.name == "\($name).zip") <<< "$ARTIFACTS")
         echo "$INFO"
         if [ "$INFO" == "[]" ]; then
