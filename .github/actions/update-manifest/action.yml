@@ -2,6 +2,18 @@ name: Update manifest
 description: Update the repository manifest file with the latest release information.
 
 inputs:
+  name:
+    description: The name of the plugin.
+    required: true
+  overview:
+    description: A short overview of the plugin.
+    required: true
+  description:
+    description: A longer description of the plugin.
+    required: true
+  category:
+    description: The category of the plugin.
+    required: true
   plugin-version:
     description: The version of the plugin.
     required: true
@@ -14,18 +26,166 @@ inputs:
   artifact-checksum:
     description: The checksum of the released package artifact.
     required: true
+  image-file:
+    description: The path to the image file to include display for the plugin listing.
+    required: false
 
 runs:
   using: "composite"
   steps:
-    - name: ???
+    - name: 🛒 Checkout actions
+      uses: actions/checkout@v3
+      with:
+        repository: geo-martino/jellyfin-plugin-repository
+        path: repository/
+        sparse-checkout: ./manifest.json
+
+    - name: ℹ️ Get plugin info
+      id: plugin-info
+      shell: bash
+      run: |
+        ID="$(yq '.guid' ./build.yaml)"
+        echo "id=$ID" >> $GITHUB_OUTPUT
+
+    - name: 🔎 Validate manifest
+      id: validate
       shell: bash
       env:
-        PLUGIN_VERSION: ${{ inputs.plugin-version }}
-        ABI_VERSION: ${{ inputs.abi-version }}
+        MANIFEST_FILE: repository/manifest.json
+        ID: ${{ steps.plugin-info.outputs.id }}
+      run: |
+        if [ ! -f "$MANIFEST_FILE" ]; then
+          printf "Manifest file does not exist. Creating new file: %s\n" "$MANIFEST_FILE"
+          echo "[]" > "$MANIFEST_FILE"
+        fi
+
+        HAS_PLUGIN=false
+        PLUGIN_MANIFEST=$(
+          jq -e --arg id "$ID" '.[] | select(.guid == $id)' \
+          "$MANIFEST_FILE" > /dev/null \
+        )
+
+        if [ -z $PLUGIN_MANIFEST ]; then
+          printf "Plugin with guid %s not found in manifest\n" "$ID"
+        else
+          printf "Plugin with guid %s already exists in manifest\n" "$ID"
+          HAS_PLUGIN=true
+        fi
+        
+        HAS_VERSION=false
+        VERSION_MANIFEST=$(
+          jq -e --arg version "$VERSION" '.versions[] | select(.version == $version)' \
+          <<< "$PLUGIN_MANIFEST" > /dev/null \
+        )
+
+        if [ -z $VERSION_MANIFEST ]; then
+          printf "Version %s not found in manifest\n" "$VERSION"
+        else
+          printf "Version %s already exists in manifest\n" "$VERSION"
+          HAS_VERSION=true
+        fi
+        
+        echo "manifest-repo=$(dirname "$MANIFEST_FILE")" >> $GITHUB_OUTPUT
+        echo "manifest-file=$MANIFEST_FILE" >> $GITHUB_OUTPUT
+        echo "has-plugin=$HAS_PLUGIN" >> $GITHUB_OUTPUT
+        echo "has-version=$HAS_VERSION" >> $GITHUB_OUTPUT
+
+    - name: 📝 Add plugin entry to manifest
+      shell: bash
+      if: steps.validate.outputs.has-plugin == 'false'
+      env:
+        MANIFEST_FILE: ${{ steps.validate.outputs.manifest-file }}
+        NAME: ${{ inputs.name }}
+        ID: ${{ steps.plugin-info.outputs.id }}
+        OVERVIEW: ${{ inputs.overview }}
+        DESCRIPTION: ${{ inputs.description }}
+        CATEGORY: ${{ inputs.category }}
+        OWNER: ${{ github.repository_owner }}
+        IMAGE_URL: "https://raw.githubusercontent.com/${{ github.repository }}/master/${{ inputs.image-file }}"
+      run: |
+        PLUGIN_ENTRY=$(
+          jq -nc \
+            --arg name "$NAME" \
+            --arg guid "$ID" \
+            --arg overview "$OVERVIEW" \
+            --arg description "$DESCRIPTION" \
+            --arg category "$CATEGORY" \
+            --arg owner "$OWNER" \
+            --arg imageUrl "$IMAGE_URL" \
+            '{name: $name, guid: $guid, overview: $overview, description: $description, category: $category, owner: $owner, imageUrl: $imageUrl, versions: []}' \
+        )
+        jq --argjson entry "$PLUGIN_ENTRY" '. += [$entry]' "$MANIFEST_FILE" > tmp && mv tmp "$MANIFEST_FILE"
+
+    - name: ℹ️ Get artifact info
+      id: artifact-info
+      shell: bash
+      env:
+        ARTIFACTS: ${{ toJson(github.event.release.assets) }}
         ARTIFACT_NAME: ${{ inputs.artifact-name }}
-        ARTIFACT_CHECKSUM: ${{ inputs.artifact-checksum }}
         CHANGELOG: ${{ github.event.release.body }}
       run: |
+        INFO=$(jq -cr --arg name "$ARTIFACT_NAME" '.[] | select(.name == "\($name).zip") <<< "$ARTIFACTS")
+
+        URL=$(jq -r '.browser_download_url' <<< "$INFO")
+        echo "url=$URL" >> $GITHUB_OUTPUT
+
+        TIMESTAMP=$(jq -r '.created_at' <<< "$INFO")
+        echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+        
         # Sanitize changelog: remove trailing "by @user in <link>" fragments GitHub adds
         CHANGELOG=$(echo "$CHANGELOG" | sed -E 's/[[:space:]]*by @[[:alnum:]-]+ in https?:\/\/[^[:space:]]+//g')
+        echo "changelog=$CHANGELOG" >> $GITHUB_OUTPUT
+
+    - name: 📝 Add version entry to manifest
+      shell: bash
+      env:
+        MANIFEST_FILE: ${{ steps.validate.outputs.manifest-file }}
+        PLUGIN_ID: ${{ steps.plugin-info.outputs.id }}
+        PLUGIN_VERSION: ${{ inputs.plugin-version }}
+        ABI_VERSION: ${{ inputs.abi-version }}
+        ARTIFACT_URL: ${{ steps.artifact-info.outputs.url }}
+        ARTIFACT_TIMESTAMP: ${{ steps.artifact-info.outputs.timestamp }}
+        ARTIFACT_CHECKSUM: ${{ inputs.artifact-checksum }}
+        CHANGELOG: ${{ steps.artifact-info.outputs.changelog }}
+        VERSION_EXISTS: ${{ steps.validate.outputs.has-version }}
+      run: |
+        VERSION_ENTRY=$(
+          jq -nc \
+            --arg version "$PLUGIN_VERSION" \
+            --arg abi "$ABI_VERSION" \
+            --arg url "$ARTIFACT_URL" \
+            --arg checksum "$CHECKSUM" \
+            --arg changelog "$CHANGELOG" \
+            --arg timestamp "$ARTIFACT_TIMESTAMP" \
+            '{version: $version, targetAbi: $abi, sourceUrl: $url, checksum: $checksum, changelog: $changelog, timestamp: $timestamp}' \
+        )
+        
+        if [ "$VERSION_EXISTS" == 'true']; then
+          printf "Version already exists in manifest. Removing existing entry.\n"
+          jq --arg id "$ID" --arg version "$PLUGIN_VERSION" \
+            'del(.[] | select(.guid == $id).versions[] | select(.version == $version))' \
+            "$MANIFEST_FILE" > tmp && mv tmp "$MANIFEST_FILE"
+        fi
+        
+        printf "Adding version entry to manifest: %s\n" "$PLUGIN_VERSION"
+        jq --arg id "$ID" --argjson entry "$VERSION_ENTRY" \
+          '(.[] | select(.guid == $id).versions) |= [$entry] + .' \
+          "$MANIFEST_FILE" > tmp && mv tmp "$MANIFEST_FILE"
+        
+        printf "Sorting %s version entries in descending version order.\n" \
+          "$(jq --arg id "$ID" '.[] | select(.guid == $id) | length' "$MANIFEST_FILE")"
+        jq --arg id "$ID" --argjson entry "$VERSION_ENTRY" \
+          '(.[] | select(.guid == $id).versions) |= (sort_by(.version) | reverse)' \
+          "$MANIFEST_FILE" > tmp && mv tmp "$MANIFEST_FILE"
+        
+        jq "$MANIFEST_FILE"  # TODO: REMOVE ME
+
+    - name: 📤 Push changes to manifest
+      shell: bash
+      working-directory: ${{ steps.validate.outputs.manifest-repo }}
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add manifest.json
+        git commit -m "Update manifest for MusicTags v${VERSION}"
+        git push

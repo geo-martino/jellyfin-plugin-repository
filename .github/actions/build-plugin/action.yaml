@@ -19,6 +19,9 @@ inputs:
     default: 'false'
 
 outputs:
+  package-version:
+    description: The version of the built plugin package.
+    value: ${{ steps.format-version.outputs.version }}
   artifact-file:
     description: The name of the built plugin package artifact uploaded to the release.
     value: ${{ steps.package.outputs.artifact-name }}
@@ -79,7 +82,7 @@ runs:
         echo "build-file=$BUILD_FILE" >> $GITHUB_OUTPUT
         echo "project-name=$PROJECT_NAME" >> $GITHUB_OUTPUT
 
-    - name: 🗂️ Package artifacts
+    - name: 📦 Package artifacts
       id: package
       shell: bash
       env:
@@ -114,14 +117,14 @@ runs:
 
     - name: 📤 Upload package artifacts to release
       uses: softprops/action-gh-release@v2
-      if: ${{ inputs.is-release == 'true' }}
+      if: inputs.is-release == 'true'
       with:
         files: ${{ steps.package.outputs.artifact-file }}
         fail_on_unmatched_files: true
 
     - name: 📤 Upload package artifacts to workflow
       uses: actions/upload-artifact@v4
-      if: ${{ inputs.is-release != 'true' }}
+      if: inputs.is-release != 'true'
       with:
         name: ${{ steps.package.outputs.artifact-name }}
         path: ${{ steps.package.outputs.artifact-file }}
