@@ -124,6 +124,7 @@ runs:
         ARTIFACT_NAME: ${{ inputs.artifact-name }}
         CHANGELOG: ${{ github.event.release.body }}
       run: |
+        echo "$ARTIFACTS"
         INFO=$(jq -cr --arg name "$ARTIFACT_NAME" '.[] | select(.name == "\($name).zip") <<< "$ARTIFACTS")
 
         URL=$(jq -r '.browser_download_url' <<< "$INFO")
