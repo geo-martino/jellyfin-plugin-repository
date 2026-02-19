@@ -51,14 +51,16 @@ runs:
         ID: ${{ inputs.plugin-id }}
         VERSION: ${{ inputs.plugin-version }}
       run: |
+        printf "Validating manifest: %s\n" "$MANIFEST_FILE"
         if [ ! -f "$MANIFEST_FILE" ]; then
           printf "Manifest file does not exist. Creating new file: %s\n" "$MANIFEST_FILE"
           echo "[]" > "$MANIFEST_FILE"
         fi
 
+        printf "Checking if manifest file already contains this plugin's metadata\n"
         HAS_PLUGIN=false
         PLUGIN_MANIFEST=$(
-          jq -e --arg id "$ID" '.[] | select(.guid == $id)' \
+          jq --arg id "$ID" '.[] | select(.guid == $id)' \
           "$MANIFEST_FILE" > /dev/null \
         )
 
@@ -69,9 +71,10 @@ runs:
           HAS_PLUGIN=true
         fi
         
+        printf "Checking if manifest file already contains this release's version metadata\n"
         HAS_VERSION=false
         VERSION_MANIFEST=$(
-          jq -e --arg version "$VERSION" '.versions[] | select(.version == $version)' \
+          jq --arg version "$VERSION" '.versions[] | select(.version == $version)' \
           <<< "$PLUGIN_MANIFEST" > /dev/null \
         )
 
