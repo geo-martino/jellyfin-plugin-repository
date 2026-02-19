@@ -127,7 +127,7 @@ runs:
         ARTIFACTS="$(curl -sL "$ASSETS_URL")"
         echo "$ARTIFACTS"
         INFO=$(jq -r --arg name "$ARTIFACT_NAME" '.[] | select(.name == "\($name)asd.zip")' <<< "$ARTIFACTS")
-        echo "$INFO"
+        echo "HELLO" "$INFO"
         if [ "$INFO" == "[]" ]; then
           printf "Artifact with name %s not found in release assets:\n%s" \
             "$ARTIFACT_NAME.zip" \
@@ -170,7 +170,7 @@ runs:
             '{version: $version, targetAbi: $abi, sourceUrl: $url, checksum: $checksum, changelog: $changelog, timestamp: $timestamp}' \
         )
         
-        if [ "$VERSION_EXISTS" == 'true']; then
+        if [ "$VERSION_EXISTS" == 'true' ]; then
           printf "Version already exists in manifest. Removing existing entry.\n"
           jq --arg id "$ID" --arg version "$PLUGIN_VERSION" \
             'del(.[] | select(.guid == $id).versions[] | select(.version == $version))' \
