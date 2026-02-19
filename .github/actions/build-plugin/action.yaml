@@ -19,10 +19,16 @@ inputs:
     default: 'false'
 
 outputs:
-  package-version:
-    description: The version of the built plugin package.
+  plugin-id:
+    description: The ID of the plugin.
+    value: ${{ steps.format-metadata.outputs.id }}
+  plugin-version:
+    description: The version of the built plugin.
     value: ${{ steps.format-version.outputs.version }}
-  artifact-file:
+  abi-version:
+    description: The version of Jellyfin needed to run the plugin.
+    value: ${{ steps.format-metadata.outputs.abi-version }}
+  artifact-name:
     description: The name of the built plugin package artifact uploaded to the release.
     value: ${{ steps.package.outputs.artifact-name }}
   artifact-checksum:
@@ -59,7 +65,6 @@ runs:
 
         VERSION=$(echo "$VERSION" | sed 's/v//' | sed 's/-$//')
         echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "is-preview=$IS_PREVIEW" >> $GITHUB_OUTPUT
 
     - name: 🏗️ Build plugin artifacts
       id: build
@@ -81,6 +86,23 @@ runs:
         BUILD_FILE="$BUILD_DIR/$PROJECT_NAME.dll"
         echo "build-file=$BUILD_FILE" >> $GITHUB_OUTPUT
         echo "project-name=$PROJECT_NAME" >> $GITHUB_OUTPUT
+
+    - name: ℹ️ Format metadata
+      id: format-metadata
+      shell: bash
+      env:
+        BUILD_FILE: ${{ steps.build.outputs.build-file }}
+        PROJECT_NAME: ${{ steps.build.outputs.project-name }}
+      run: |
+        ID="$(grep -o '.\{8\}-.\{4\}-.\{4\}-.\{4\}-.\{12\}' "./$PROJECT_NAME/Configuration/configPage.html" | head -n1)"
+        echo "id=$ID" >> $GITHUB_OUTPUT
+
+        ABI_VERSION="$( \
+          jq -r --arg name "Jellyfin.Common" \
+            '.libraries | keys[] | select(startswith($name)) | sub($name + "/"; "")' \
+            "$(dirname "$BUILD_FILE")/$PROJECT_NAME.deps.json" \
+        )"
+        echo "abi-version=$ABI_VERSION" >> $GITHUB_OUTPUT
 
     - name: 📦 Package artifacts
       id: package

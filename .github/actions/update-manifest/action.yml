@@ -14,6 +14,9 @@ inputs:
   category:
     description: The category of the plugin.
     required: true
+  plugin-id:
+    description: The ID of the plugin.
+    required: true
   plugin-version:
     description: The version of the plugin.
     required: true
@@ -40,19 +43,12 @@ runs:
         path: repository/
         sparse-checkout: ./manifest.json
 
-    - name: ℹ️ Get plugin info
-      id: plugin-info
-      shell: bash
-      run: |
-        ID="$(yq '.guid' ./build.yaml)"
-        echo "id=$ID" >> $GITHUB_OUTPUT
-
     - name: 🔎 Validate manifest
       id: validate
       shell: bash
       env:
         MANIFEST_FILE: repository/manifest.json
-        ID: ${{ steps.plugin-info.outputs.id }}
+        ID: ${{ inputs.plugin-id }}
       run: |
         if [ ! -f "$MANIFEST_FILE" ]; then
           printf "Manifest file does not exist. Creating new file: %s\n" "$MANIFEST_FILE"
@@ -96,7 +92,7 @@ runs:
       env:
         MANIFEST_FILE: ${{ steps.validate.outputs.manifest-file }}
         NAME: ${{ inputs.name }}
-        ID: ${{ steps.plugin-info.outputs.id }}
+        ID: ${{ inputs.plugin-id }}
         OVERVIEW: ${{ inputs.overview }}
         DESCRIPTION: ${{ inputs.description }}
         CATEGORY: ${{ inputs.category }}
@@ -140,7 +136,7 @@ runs:
       shell: bash
       env:
         MANIFEST_FILE: ${{ steps.validate.outputs.manifest-file }}
-        PLUGIN_ID: ${{ steps.plugin-info.outputs.id }}
+        PLUGIN_ID: ${{ inputs.plugin-id }}
         PLUGIN_VERSION: ${{ inputs.plugin-version }}
         ABI_VERSION: ${{ inputs.abi-version }}
         ARTIFACT_URL: ${{ steps.artifact-info.outputs.url }}
