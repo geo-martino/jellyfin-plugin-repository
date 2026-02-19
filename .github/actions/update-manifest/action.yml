@@ -67,7 +67,7 @@ runs:
           "$MANIFEST_FILE" \
         )
 
-        if [ -z $PLUGIN_MANIFEST ]; then
+        if [ -z "$PLUGIN_MANIFEST" ]; then
           printf "Plugin with guid %s not found in manifest\n" "$ID"
         else
           printf "Plugin with guid %s already exists in manifest\n" "$ID"
@@ -81,7 +81,7 @@ runs:
           <<< "$PLUGIN_MANIFEST" \
         )
 
-        if [ -z $VERSION_MANIFEST ]; then
+        if [ -z "$VERSION_MANIFEST" ]; then
           printf "Version %s not found in manifest\n" "$VERSION"
         else
           printf "Version %s already exists in manifest\n" "$VERSION"
