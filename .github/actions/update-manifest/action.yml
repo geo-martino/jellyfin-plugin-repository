@@ -124,7 +124,6 @@ runs:
         ARTIFACT_NAME: ${{ inputs.artifact-name }}
         CHANGELOG: ${{ github.event.release.body }}
       run: |
-        echo "$ARTIFACTS"
         INFO=$(jq -cr --arg name "$ARTIFACT_NAME" '.[] | select(.name == "\($name).zip") <<< "$ARTIFACTS")
 
         URL=$(jq -r '.browser_download_url' <<< "$INFO")
@@ -133,8 +132,9 @@ runs:
         TIMESTAMP=$(jq -r '.created_at' <<< "$INFO")
         echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
         
+        echo "$CHANGELOG"
         # Sanitize changelog: remove trailing "by @user in <link>" fragments GitHub adds
-        CHANGELOG=$(echo "$CHANGELOG" | sed -E 's/[[:space:]]*by @[[:alnum:]-]+ in https?:\/\/[^[:space:]]+//g')
+        CHANGELOG=$(sed -E 's/[[:space:]]*by @[[:alnum:]-]+ in https?:\/\/[^[:space:]]+//g' <<< "$CHANGELOG")
         echo "changelog=$CHANGELOG" >> $GITHUB_OUTPUT
 
     - name: 📝 Add version entry to manifest
