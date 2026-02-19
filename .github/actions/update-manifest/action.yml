@@ -44,7 +44,6 @@ runs:
       with:
         repository: geo-martino/jellyfin-plugin-repository
         path: repository/
-        sparse-checkout: ./manifest.json
         token: ${{ inputs.github-token }}
 
     - name: 🔎 Validate manifest
