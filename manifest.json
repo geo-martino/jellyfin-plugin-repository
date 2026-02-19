@@ -12,17 +12,9 @@
         "version": "10.11.6.0",
         "targetAbi": "10.11.6",
         "sourceUrl": "https://github.com/geo-martino/jellyfin-plugin-autoorganiser/releases/download/v10.11.6.0/Jellyfin.Plugin.AutoOrganiser.zip",
-        "checksum": "F360D2CD92E7F0D2748523540041FCAE",
+        "checksum": "9C00110E7F90FD90C6E69A2F01739223",
         "changelog": "",
-        "timestamp": "2026-02-19T16:59:12Z"
-      },
-      {
-        "version": "10.11.6.0",
-        "targetAbi": "10.11.6",
-        "sourceUrl": "https://github.com/geo-martino/jellyfin-plugin-autoorganiser/releases/download/v10.11.6.0/Jellyfin.Plugin.AutoOrganiser.zip",
-        "checksum": "F360D2CD92E7F0D2748523540041FCAE",
-        "changelog": "",
-        "timestamp": "2026-02-19T16:59:12Z"
+        "timestamp": "2026-02-19T17:06:50Z"
       }
     ]
   }
