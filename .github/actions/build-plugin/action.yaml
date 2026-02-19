@@ -1,0 +1,124 @@
+name: Build plugin
+description: Build the plugin using .NET SDK and update the GitHub release with the built package artifacts.
+
+inputs:
+  dotnet-version:
+    description: The version of .NET SDK to use for building and testing the plugin.
+    required: false
+    default: '9.0.x'
+  project-dir:
+    description: The directory of the plugin project.
+    required: true
+  logo-file:
+    description: The path to the logo file to include in the plugin package.
+    required: false
+    default: './images/logo.jpg'
+  is-release:
+    description: Whether the current build is for a release. If false, the artifact will be uploaded to the workflow instead of the release. This is useful for testing the build process without creating a release.
+    required: true
+    default: 'false'
+
+outputs:
+  artifact-file:
+    description: The name of the built plugin package artifact uploaded to the release.
+    value: ${{ steps.package.outputs.artifact-name }}
+  artifact-checksum:
+    description: The MD5 checksum of the built plugin package artifact.
+    value: ${{ steps.package.outputs.checksum }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: ⚙️ Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+
+    - name: 📥 Restore dependencies
+      shell: bash
+      run: dotnet restore
+
+    - name: ℹ️ Format version
+      id: format-version
+      shell: bash
+      env:
+        TAG_NAME: ${{ github.ref_name }}
+      run: |
+        if echo "$TAG_NAME" | grep -E "preview|rc" > /dev/null; then
+          printf "Preview tag detected: %s\n" "$TAG_NAME"
+          IS_PREVIEW=false
+          VERSION="$TAG_NAME"
+        else
+          printf "Release tag detected: %s\n" "$TAG_NAME"
+          IS_PREVIEW=false
+          VERSION=$(echo "$TAG_NAME" | sed -E 's/(preview|rc).*$//')
+        fi
+
+        VERSION=$(echo "$VERSION" | sed 's/v//' | sed 's/-$//')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "is-preview=$IS_PREVIEW" >> $GITHUB_OUTPUT
+
+    - name: 🏗️ Build plugin artifacts
+      id: build
+      shell: bash
+      env:
+        PROJECT_DIR: ${{ inputs.project-dir }}
+        VERSION: ${{ steps.format-version.outputs.version }}
+        TAG_NAME: ${{ github.ref_name }}
+        BUILD_DIR: "./bin"
+      run: |
+        printf "Building %s in %s as version: %s\n "$TAG_NAME" "$PROJECT_DIR" "$VERSION"
+        PROJECT_FILE="$(find "$PROJECT_DIR" -type f -iname "*.csproj" | head -n1)"
+
+        dotnet build "$PROJECT_FILE" \
+          --configuration Release --no-self-contained --output "$BUILD_DIR" --no-restore \
+          /p:Version=$VERSION /p:AssemblyVersion=$VERSION
+        
+        PROJECT_NAME=$(basename "$PROJECT_FILE" ".csproj")
+        BUILD_FILE="$BUILD_DIR/$PROJECT_NAME.dll"
+        echo "build-file=$BUILD_FILE" >> $GITHUB_OUTPUT
+        echo "project-name=$PROJECT_NAME" >> $GITHUB_OUTPUT
+
+    - name: 🗂️ Package artifacts
+      id: package
+      shell: bash
+      env:
+        ARTIFACT_DIR: "./build"
+        PROJECT_NAME: ${{ steps.build.outputs.project-name }}
+        TAG_NAME: ${{ github.ref_name }}
+        BUILD_FILE: ${{ steps.build.outputs.build-file }}
+        LOGO_FILE: ${{ inputs.logo-file }}
+      run: |
+        mkdir -p "$ARTIFACT_DIR"
+
+        cp "$BUILD_FILE" "$ARTIFACT_DIR"
+
+        if [[ -f "$LOGO_FILE" ]]; then
+          printf "Adding logo file: %s\n" "$LOGO_FILE"
+          cp "$LOGO_FILE" "$ARTIFACT_DIR/logo.jpg"
+        else
+          printf "No logo file found at: %s\n" "$LOGO_FILE"
+        fi
+        
+        ARTIFACT_FILE="$ARTIFACT_DIR/$PROJECT_NAME.zip"
+        zip -X -j "$ARTIFACT_FILE" "$ARTIFACT_DIR"/*
+        ARTIFACT_CHECKSUM=$(md5sum "$ARTIFACT_FILE" | cut -d' ' -f1 | tr '[:lower:]' '[:upper:]')
+
+        echo "artifact-file=$ARTIFACT_FILE" >> $GITHUB_OUTPUT
+        echo "artifact-name=$(basename "$ARTIFACT_FILE")" >> $GITHUB_OUTPUT
+        echo "artifact-checksum=$ARTIFACT_CHECKSUM" >> $GITHUB_OUTPUT
+
+    - name: 📤 Upload package artifacts to release
+      uses: softprops/action-gh-release@v2
+      if: ${{ inputs.is-release == 'true' }}
+      with:
+        files: ${{ steps.package.outputs.artifact-file }}
+        fail_on_unmatched_files: true
+
+    - name: 📤 Upload package artifacts to workflow
+      uses: actions/upload-artifact@v4
+      if: ${{ inputs.is-release != 'true' }}
+      with:
+        name: ${{ steps.package.outputs.artifact-name }}
+        path: ${{ steps.package.outputs.artifact-file }}
+        if-no-files-found: error
