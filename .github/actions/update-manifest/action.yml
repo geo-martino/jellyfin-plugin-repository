@@ -192,9 +192,12 @@ runs:
     - name: 📤 Push changes to manifest
       shell: bash
       working-directory: ${{ steps.validate.outputs.manifest-repo }}
+      env:
+        NAME: ${{ inputs.name }}
+        VERSION: ${{ inputs.plugin-version }}
       run: |
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
         git add manifest.json
-        git commit -m "Update manifest for MusicTags v${VERSION}"
+        git commit -m "Update manifest for "$NAME" - v$VERSION"
         git push
