@@ -49,6 +49,7 @@ runs:
       env:
         MANIFEST_FILE: repository/manifest.json
         ID: ${{ inputs.plugin-id }}
+        VERSION: ${{ inputs.plugin-version }}
       run: |
         if [ ! -f "$MANIFEST_FILE" ]; then
           printf "Manifest file does not exist. Creating new file: %s\n" "$MANIFEST_FILE"
