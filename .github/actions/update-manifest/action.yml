@@ -120,13 +120,13 @@ runs:
       id: artifact-info
       shell: bash
       env:
-        ARTIFACTS: ${{ fromJson(github.event.release.assets) }}
+        ARTIFACTS: ${{ toJSON(github.event.release.assets) }}
         ARTIFACT_NAME: ${{ inputs.artifact-name }}
         CHANGELOG: ${{ github.event.release.body }}
       run: |
-        echo ${{ fromJson(github.event) }}
-        echo ${{ fromJson(github.event.release) }}
-        echo ${{ fromJson(github.event.release.assets) }}
+        echo ${{ toJson(github.event) }}
+        echo ${{ toJson(github.event.release) }}
+        echo ${{ toJson(github.event.release.assets) }}
 
         INFO=$(jq -cr --arg name "$ARTIFACT_NAME" '.[] | select(.name == "\($name).zip") <<< "$ARTIFACTS")
         if [ -z "$INFO" ]; then
