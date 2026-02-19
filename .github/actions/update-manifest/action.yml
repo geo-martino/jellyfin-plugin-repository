@@ -148,7 +148,7 @@ runs:
       shell: bash
       env:
         MANIFEST_FILE: ${{ steps.validate.outputs.manifest-file }}
-        PLUGIN_ID: ${{ inputs.plugin-id }}
+        ID: ${{ inputs.plugin-id }}
         PLUGIN_VERSION: ${{ inputs.plugin-version }}
         ABI_VERSION: ${{ inputs.abi-version }}
         ARTIFACT_URL: ${{ steps.artifact-info.outputs.url }}
