@@ -104,7 +104,7 @@ runs:
         IMAGE_URL: "https://raw.githubusercontent.com/${{ github.repository }}/master/${{ inputs.image-file }}"
       run: |
         PLUGIN_ENTRY=$(
-          jq -nc \
+          jq -n \
             --arg name "$NAME" \
             --arg guid "$ID" \
             --arg overview "$OVERVIEW" \
@@ -126,7 +126,7 @@ runs:
       run: |
         ARTIFACTS="$(curl -sL "$ASSETS_URL")"
         echo "$ARTIFACTS"
-        INFO=$(jq -cr --arg name "$ARTIFACT_NAME" '.[] | select(.name == "\($name).zip") <<< "$ARTIFACTS")
+        INFO=$(jq -r --arg name "$ARTIFACT_NAME" '.[] | select(.name == "\($name)asd.zip")' <<< "$ARTIFACTS")
         echo "$INFO"
         if [ "$INFO" == "[]" ]; then
           printf "Artifact with name %s not found in release assets:\n%s" \
@@ -160,7 +160,7 @@ runs:
         VERSION_EXISTS: ${{ steps.validate.outputs.has-version }}
       run: |
         VERSION_ENTRY=$(
-          jq -nc \
+          jq -n \
             --arg version "$PLUGIN_VERSION" \
             --arg abi "$ABI_VERSION" \
             --arg url "$ARTIFACT_URL" \
