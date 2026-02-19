@@ -162,13 +162,11 @@ runs:
             --arg version "$PLUGIN_VERSION" \
             --arg abi "$ABI_VERSION" \
             --arg url "$ARTIFACT_URL" \
-            --arg checksum "$CHECKSUM" \
+            --arg checksum "$ARTIFACT_CHECKSUM" \
             --arg changelog "$CHANGELOG" \
             --arg timestamp "$ARTIFACT_TIMESTAMP" \
             '{version: $version, targetAbi: $abi, sourceUrl: $url, checksum: $checksum, changelog: $changelog, timestamp: $timestamp}' \
         )
-        
-        echo 1 && cat "$MANIFEST_FILE"  # TODO: REMOVE ME
         
         if [ "$VERSION_EXISTS" == 'true' ]; then
           printf "Version already exists in manifest. Removing existing entry.\n"
@@ -177,23 +175,18 @@ runs:
             "$MANIFEST_FILE" > tmp && mv tmp "$MANIFEST_FILE"
         fi
         
-        echo 2 && cat "$MANIFEST_FILE"  # TODO: REMOVE ME
-        
         printf "Adding version entry to manifest: %s\n" "$PLUGIN_VERSION"
         jq --arg id "$ID" --argjson entry "$VERSION_ENTRY" \
           '(.[] | select(.guid == $id).versions) |= [$entry] + .' \
           "$MANIFEST_FILE" > tmp && mv tmp "$MANIFEST_FILE"
-        
-        echo 3 && cat "$MANIFEST_FILE"  # TODO: REMOVE ME
         
         printf "Sorting %s version entries in descending version order.\n" \
           "$(jq --arg id "$ID" '.[] | select(.guid == $id) | length' "$MANIFEST_FILE")"
         jq --arg id "$ID" \
           '(.[] | select(.guid == $id).versions) |= (sort_by(.version) | reverse)' \
           "$MANIFEST_FILE" > tmp && mv tmp "$MANIFEST_FILE"
-        
-        echo 4 && cat "$MANIFEST_FILE"  # TODO: REMOVE ME
-        jq "$MANIFEST_FILE"  # TODO: REMOVE ME
+
+        jq < "$MANIFEST_FILE"
 
     - name: 📤 Push changes to manifest
       shell: bash
