@@ -33,7 +33,7 @@ outputs:
     value: ${{ steps.package.outputs.artifact-name }}
   artifact-checksum:
     description: The MD5 checksum of the built plugin package artifact.
-    value: ${{ steps.package.outputs.checksum }}
+    value: ${{ steps.package.outputs.artifact-checksum }}
 
 runs:
   using: "composite"
