@@ -64,7 +64,7 @@ runs:
         HAS_PLUGIN=false
         PLUGIN_MANIFEST=$(
           jq --arg id "$ID" '.[] | select(.guid == $id)' \
-          "$MANIFEST_FILE" > /dev/null \
+          "$MANIFEST_FILE" \
         )
 
         if [ -z $PLUGIN_MANIFEST ]; then
@@ -78,7 +78,7 @@ runs:
         HAS_VERSION=false
         VERSION_MANIFEST=$(
           jq --arg version "$VERSION" '.versions[] | select(.version == $version)' \
-          <<< "$PLUGIN_MANIFEST" > /dev/null \
+          <<< "$PLUGIN_MANIFEST" \
         )
 
         if [ -z $VERSION_MANIFEST ]; then
@@ -188,8 +188,6 @@ runs:
         jq --arg id "$ID" \
           '(.[] | select(.guid == $id).versions) |= (sort_by(.version) | reverse)' \
           "$MANIFEST_FILE" > tmp && mv tmp "$MANIFEST_FILE"
-
-        jq < "$MANIFEST_FILE"
 
     - name: 📤 Push changes to manifest
       shell: bash
