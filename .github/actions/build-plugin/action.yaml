@@ -67,7 +67,7 @@ runs:
         TAG_NAME: ${{ github.ref_name }}
         BUILD_DIR: "./bin"
       run: |
-        printf "Building %s in %s as version: %s\n "$TAG_NAME" "$PROJECT_DIR" "$VERSION"
+        printf "Building %s in %s as version: %s\n" "$TAG_NAME" "$PROJECT_DIR" "$VERSION"
         PROJECT_FILE="$(find "$PROJECT_DIR" -type f -iname "*.csproj" | head -n1)"
 
         dotnet build "$PROJECT_FILE" \
@@ -91,6 +91,7 @@ runs:
       run: |
         mkdir -p "$ARTIFACT_DIR"
 
+        printf "Adding plugin: %s\n" "$BUILD_FILE"
         cp "$BUILD_FILE" "$ARTIFACT_DIR"
 
         if [[ -f "$LOGO_FILE" ]]; then
@@ -104,6 +105,9 @@ runs:
         zip -X -j "$ARTIFACT_FILE" "$ARTIFACT_DIR"/*
         ARTIFACT_CHECKSUM=$(md5sum "$ARTIFACT_FILE" | cut -d' ' -f1 | tr '[:lower:]' '[:upper:]')
 
+        printf "Built artifact: %s\n" "$ARTIFACT_FILE"
+        printf "Checksum: %s\n" "$ARTIFACT_CHECKSUM"
+      
         echo "artifact-file=$ARTIFACT_FILE" >> $GITHUB_OUTPUT
         echo "artifact-name=$(basename "$ARTIFACT_FILE")" >> $GITHUB_OUTPUT
         echo "artifact-checksum=$ARTIFACT_CHECKSUM" >> $GITHUB_OUTPUT

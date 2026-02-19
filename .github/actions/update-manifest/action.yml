@@ -1,0 +1,31 @@
+name: Update manifest
+description: Update the repository manifest file with the latest release information.
+
+inputs:
+  plugin-version:
+    description: The version of the plugin.
+    required: true
+  abi-version:
+    description: The version of Jellyfin.
+    required: true
+  artifact-name:
+    description: The name of the released package artifact.
+    required: true
+  artifact-checksum:
+    description: The checksum of the released package artifact.
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: ???
+      shell: bash
+      env:
+        PLUGIN_VERSION: ${{ inputs.plugin-version }}
+        ABI_VERSION: ${{ inputs.abi-version }}
+        ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        ARTIFACT_CHECKSUM: ${{ inputs.artifact-checksum }}
+        CHANGELOG: ${{ github.event.release.body }}
+      run: |
+        # Sanitize changelog: remove trailing "by @user in <link>" fragments GitHub adds
+        CHANGELOG=$(echo "$CHANGELOG" | sed -E 's/[[:space:]]*by @[[:alnum:]-]+ in https?:\/\/[^[:space:]]+//g')
