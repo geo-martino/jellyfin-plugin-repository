@@ -128,7 +128,7 @@ runs:
         echo "$ARTIFACTS"
         INFO=$(jq -r --arg name "$ARTIFACT_NAME" '.[] | select(.name == "\($name)asd.zip")' <<< "$ARTIFACTS")
         echo "HELLO" "$INFO"
-        if [ "$INFO" == "[]" ]; then
+        if [ -z "$INFO" ]; then
           printf "Artifact with name %s not found in release assets:\n%s" \
             "$ARTIFACT_NAME.zip" \
             "$(jq -r <<< "$ARTIFACTS")"
