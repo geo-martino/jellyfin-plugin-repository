@@ -101,7 +101,7 @@ runs:
           printf "No logo file found at: %s\n" "$LOGO_FILE"
         fi
         
-        ARTIFACT_FILE="$ARTIFACT_DIR/$PROJECT_NAME.zip"
+        ARTIFACT_FILE="$ARTIFACT_DIR/$PROJECT_NAME"
         zip -X -j "$ARTIFACT_FILE" "$ARTIFACT_DIR"/*
         ARTIFACT_CHECKSUM=$(md5sum "$ARTIFACT_FILE" | cut -d' ' -f1 | tr '[:lower:]' '[:upper:]')
 
