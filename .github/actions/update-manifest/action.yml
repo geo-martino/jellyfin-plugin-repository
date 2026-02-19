@@ -120,16 +120,14 @@ runs:
       id: artifact-info
       shell: bash
       env:
-        ARTIFACTS: ${{ toJson(github.event.release.assets) }}
+        ASSETS_URL: ${{ github.event.release.assets_url }}
         ARTIFACT_NAME: ${{ inputs.artifact-name }}
         CHANGELOG: ${{ github.event.release.body }}
       run: |
-        echo ${{ github.event.release.assets_url }}
-        echo ${{ toJson(github.event.release.assets) }}
-
+        ARTIFACTS=$(curl -sL -H "Accept: application/vnd.github.v3+json" "$ASSETS_URL")
         INFO=$(jq -cr --arg name "$ARTIFACT_NAME" '.[] | select(.name == "\($name).zip") <<< "$ARTIFACTS")
         echo "$INFO"
-        if [ -z "$INFO" ]; then
+        if [ "$INFO" == "[]" ]; then
           printf "Artifact with name %s not found in release assets:\n%s" \
             "$ARTIFACT_NAME.zip" \
             "$(jq -r <<< "$ARTIFACTS")"
