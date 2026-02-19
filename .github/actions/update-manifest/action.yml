@@ -124,7 +124,17 @@ runs:
         ARTIFACT_NAME: ${{ inputs.artifact-name }}
         CHANGELOG: ${{ github.event.release.body }}
       run: |
+        echo ${{ github.event }}
+        echo ${{ github.event.release }}
+        echo ${{ github.event.release.assets }}
+
         INFO=$(jq -cr --arg name "$ARTIFACT_NAME" '.[] | select(.name == "\($name).zip") <<< "$ARTIFACTS")
+        if [ -z "$INFO" ]; then
+          printf "Artifact with name %s not found in release assets:\n%s" \
+            "$ARTIFACT_NAME.zip" \
+            "$(jq -r <<< "$ARTIFACTS")"
+          exit 1
+        fi
 
         URL=$(jq -r '.browser_download_url' <<< "$INFO")
         echo "url=$URL" >> $GITHUB_OUTPUT
