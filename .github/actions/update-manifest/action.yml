@@ -32,6 +32,9 @@ inputs:
   image-file:
     description: The path to the image file to include display for the plugin listing.
     required: false
+  github-token:
+    description: GitHub token for writing to the manifest repository.
+    required: true
 
 runs:
   using: "composite"
@@ -42,6 +45,7 @@ runs:
         repository: geo-martino/jellyfin-plugin-repository
         path: repository/
         sparse-checkout: ./manifest.json
+        token: ${{ inputs.github-token }}
 
     - name: 🔎 Validate manifest
       id: validate
@@ -181,7 +185,7 @@ runs:
           "$MANIFEST_FILE" > tmp && mv tmp "$MANIFEST_FILE"
         
         printf "Sorting %s version entries in descending version order.\n" \
-          "$(jq --arg id "$ID" '.[] | select(.guid == $id) | length' "$MANIFEST_FILE")"
+          "$(jq --arg id "$ID" '.[] | select(.guid == $id).versions | length' "$MANIFEST_FILE")"
         jq --arg id "$ID" \
           '(.[] | select(.guid == $id).versions) |= (sort_by(.version) | reverse)' \
           "$MANIFEST_FILE" > tmp && mv tmp "$MANIFEST_FILE"
